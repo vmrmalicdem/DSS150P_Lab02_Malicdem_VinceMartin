@@ -16,7 +16,7 @@
 - **orders.json**: 9 fields including a nested `shipping` object (region, method). All 250 records share the same keys. `order_timestamp` is text, logically a timestamp.
 - **products.parquet**: 7 columns, types preserved on read (float64, int32) unlike CSV/JSON, which need re-inference.
 - **REST API events**: event_id, customer_id, event_type, amount (float), updated_at (text), nested metadata (channel, campaign).
-- **support_tickets**: 8 columns, ticket_id is the primary key, assigned_agent and resolved_at are nullable.
+- **support_tickets**: 8 columns — ticket_id (integer, primary key), customer_id (varchar 10), category (varchar 40), priority (varchar 10), assigned_agent (varchar 80, nullable), opened_at (timestamp), resolved_at (timestamp, nullable), status (varchar 20).
 
 ## 3. Data Quality Findings
 
