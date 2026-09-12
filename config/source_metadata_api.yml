@@ -1,0 +1,23 @@
+source_name: "REST API - Events"
+source_type: "REST API (paginated, JSON)"
+location_or_endpoint: "http://127.0.0.1:8000/api/events"
+owner: "TBD - Data Engineering Team"
+description: "Event records tracking customer interactions (e.g. page_view), including amount and channel/campaign metadata."
+record_count: 122
+schema:
+  - event_id: string
+  - customer_id: string
+  - event_type: string
+  - amount: float
+  - updated_at: string (ISO-8601 timestamp)
+  - metadata: nested object (channel, campaign)
+primary_or_candidate_key: "event_id"
+update_pattern: "Incremental - supports updated_after filtering; source is described as containing repeated event IDs with newer timestamps (updates to existing records)"
+known_quality_issues:
+  - "Two known event IDs are repeated with newer updated_at values, meaning naive ingestion without deduplication would create duplicate logical records"
+  - "updated_at arrives as a string, not a native timestamp type, requiring parsing before use as a watermark"
+acquisition_method: "Paginated HTTP GET, looping until has_more is false"
+validation_checks:
+  - "event_id must be non-null and unique per ingestion batch (after dedup)"
+  - "amount must be a non-negative number"
+  - "updated_at must parse as a valid ISO-8601 timestamp"

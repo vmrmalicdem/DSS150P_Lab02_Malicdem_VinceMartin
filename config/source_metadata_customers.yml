@@ -1,0 +1,25 @@
+source_name: "Customers"
+source_type: "CSV file"
+location_or_endpoint: "data/customers.csv"
+owner: "TBD - Data Engineering Team"
+description: "Customer records including name, email, city, signup date, and segment classification."
+record_count: 250
+schema:
+  - customer_id: string
+  - first_name: string
+  - last_name: string
+  - email: string, nullable
+  - city: string, nullable
+  - signup_date: string (candidate date type)
+  - customer_segment: string
+primary_or_candidate_key: "customer_id"
+update_pattern: "Static file snapshot"
+known_quality_issues:
+  - "3 rows missing email, 2 rows missing city"
+  - "4 exact duplicate rows (full row repeated), e.g. customer_id C0036 and C0145 each appear twice with identical values"
+  - "customer_id is not fully unique: 250 rows but only 247 unique values; notably C0090 appears twice with conflicting data (different first_name, signup_date, and segment), meaning this is not just a repeated row but a genuine key collision with inconsistent attributes"
+acquisition_method: "File copy with manifest (SHA-256 hash for duplicate detection on rerun)"
+validation_checks:
+  - "customer_id should be unique; current data violates this and needs a resolution rule before use as a hard key downstream"
+  - "email should be non-null and match a valid email pattern"
+  - "customer_segment should be one of a known fixed set of values"

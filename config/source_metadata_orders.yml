@@ -1,0 +1,27 @@
+source_name: "Orders"
+source_type: "JSON file"
+location_or_endpoint: "data/orders.json"
+owner: "TBD - Data Engineering Team"
+description: "Order records including timestamps, item counts, pricing, and nested shipping details."
+record_count: 250
+schema:
+  - order_id: string
+  - customer_id: string
+  - order_timestamp: string (candidate timestamp type)
+  - status: string
+  - item_count: integer
+  - subtotal: float
+  - shipping_fee: integer
+  - total_amount: float
+  - shipping: nested object (region, method)
+primary_or_candidate_key: "order_id"
+update_pattern: "Static file snapshot"
+known_quality_issues:
+  - "No missing values in any top-level or flattened field, including nested shipping.region and shipping.method - cleaner than customers.csv or support_tickets"
+  - "order_timestamp is stored as a string, not a native timestamp type, requiring parsing before use in time-based logic"
+  - "shipping_fee is typed as integer while subtotal/total_amount are float - worth confirming this is intentional (e.g. flat fee tiers) rather than a type inconsistency"
+acquisition_method: "File copy with manifest (SHA-256 hash for duplicate detection on rerun)"
+validation_checks:
+  - "order_id must be non-null and unique"
+  - "total_amount should equal subtotal + shipping_fee (cross-field consistency check)"
+  - "status should be one of a known fixed set of values"

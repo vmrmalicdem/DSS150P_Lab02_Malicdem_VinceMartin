@@ -1,0 +1,25 @@
+source_name: "Products"
+source_type: "Parquet file"
+location_or_endpoint: "data/products.parquet"
+owner: "TBD - Data Engineering Team"
+description: "Product catalog including category, brand, pricing, stock, and weight."
+record_count: 200
+schema:
+  - product_id: string
+  - product_name: string
+  - category: string
+  - brand: string
+  - unit_price: float64
+  - stock_quantity: int32
+  - weight_kg: float64
+dtype: object
+primary_or_candidate_key: "product_id"
+update_pattern: "Static file snapshot; parquet's typed schema means no re-inference needed on read, unlike CSV/JSON"
+known_quality_issues:
+  - "No missing values in any column - cleanest of the three file sources"
+  - "stock_quantity is stored as int32 rather than the default int64 pandas uses for CSV-derived integers, confirming parquet preserves exact source typing rather than defaulting broadly"
+acquisition_method: "File copy with manifest (SHA-256 hash for duplicate detection on rerun)"
+validation_checks:
+  - "product_id must be non-null and unique"
+  - "unit_price and stock_quantity must be non-negative"
+  - "category should be one of a known fixed set of values"

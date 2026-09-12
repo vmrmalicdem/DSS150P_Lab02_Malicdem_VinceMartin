@@ -1,0 +1,25 @@
+source_name: "Support Tickets"
+source_type: "PostgreSQL table"
+location_or_endpoint: "postgresql://dss150p@localhost/dss150p - table: support_tickets"
+owner: "TBD - Data Engineering Team"
+description: "Customer support ticket records including category, priority, assigned agent, and resolution status."
+record_count: 250
+schema:
+  - ticket_id: integer (primary key)
+  - customer_id: string
+  - category: varchar(40)
+  - priority: varchar(10)
+  - assigned_agent: varchar(80), nullable
+  - opened_at: timestamp
+  - resolved_at: timestamp, nullable
+  - status: varchar(20)
+primary_or_candidate_key: "ticket_id"
+update_pattern: "Static snapshot in this lab (seeded once); in production would likely be an operational table updated continuously as tickets are opened/resolved"
+known_quality_issues:
+  - "4 rows have assigned_agent = NULL (unassigned tickets)"
+  - "resolved_at is NULL whenever status is 'Open' or 'In Progress', which is expected business logic rather than a defect, but must be handled explicitly downstream"
+acquisition_method: "Bounded SQL queries against the source table (inspection only in this lab; no live ingestion pipeline built)"
+validation_checks:
+  - "ticket_id must be non-null and unique (enforced by primary key)"
+  - "status must be one of a known fixed set (e.g. Open, In Progress, Resolved, Closed)"
+  - "resolved_at must be null when status is Open or In Progress, and non-null otherwise"
