@@ -1,18 +1,42 @@
 dataset: customers
-owner: "TODO"
+owner: "TBD - Data Engineering Team (producer)"
+consumer: "TBD - Analytics/ML Team (downstream consumer)"
 source_type: csv
 primary_key: customer_id
 delivery:
-  cadence: "TODO"
+  cadence: "Static file drop for this lab; production equivalent assumed daily batch export"
 fields:
   - name: customer_id
     type: string
     nullable: false
-    unique: true
+    unique: true  # intended constraint - source data currently violates this, see quality_rules
+  - name: first_name
+    type: string
+    nullable: false
+  - name: last_name
+    type: string
+    nullable: false
   - name: email
     type: string
     nullable: true
+  - name: city
+    type: string
+    nullable: true
+  - name: signup_date
+    type: date
+    nullable: false
+  - name: customer_segment
+    type: string
+    nullable: false
 quality_rules:
-  - "TODO: define at least 5 rules"
+  - "customer_id must be non-null and unique (source currently has 250 rows / 247 unique values - violation must be resolved before use as a hard key)"
+  - "email must be non-null and match a valid email format when present"
+  - "customer_segment must be one of a known fixed set of values (e.g. Student, Professional, SME, Retail)"
+  - "signup_date must parse as a valid date and not be in the future"
+  - "no exact duplicate rows should exist (source currently has 4 confirmed duplicate rows)"
 change_policy:
-  schema_change_notice: "TODO"
+  schema_change_notice: "Producer must notify consumer at least 5 business days before adding, removing, or renaming a field, or changing a field's type or nullability"
+escalation_contact: "TBD - Data Engineering on-call / team lead"
+ingestion_approach:
+  type: "Full"
+  justification: "Source is a static file with no change-tracking field (no updated_at or last_modified column), so the source itself doesn't support incremental extraction. Every run re-reads the full file; duplicate prevention is handled via SHA-256 file hashing rather than row-level watermarking."
