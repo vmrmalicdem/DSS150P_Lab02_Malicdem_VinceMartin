@@ -35,6 +35,43 @@ def save_watermark(value):
     (STATE/'api_watermark.json').write_text(json.dumps({'updated_at':value},indent=2))
 
 
+def validate_file_manifest(manifest, files_raw):
+    """Automated checks on the file manifest and raw copies. Raises AssertionError on failure."""
+    seen_names = [m['source_file'] for m in manifest]
+    assert len(seen_names) == len(set(seen_names)), \
+        f"manifest has duplicate source_file entries: {seen_names}"
+
+    for m in manifest:
+        assert m.get('sha256'), f"missing sha256 for {m.get('source_file')}"
+        assert isinstance(m.get('bytes'), int) and m['bytes'] > 0, \
+            f"invalid byte size for {m.get('source_file')}"
+
+        dest = files_raw/m['source_file']
+        assert dest.exists(), f"manifest references {m['source_file']} but raw copy is missing at {dest}"
+
+        actual_hash = sha256_file(dest)
+        assert actual_hash == m['sha256'], \
+            f"raw copy of {m['source_file']} does not match manifest hash (file may have been altered after ingest)"
+
+    print(f"[files] validation passed: {len(manifest)} manifest entries checked")
+
+
+def validate_api_output(final_records):
+    """Automated checks on the deduplicated API output. Raises AssertionError on failure."""
+    ids = [r['event_id'] for r in final_records]
+    assert len(ids) == len(set(ids)), "duplicate event_id found in final output after dedup"
+
+    for r in final_records:
+        assert r.get('event_id'), "record missing event_id"
+        assert r.get('updated_at'), f"record {r.get('event_id')} missing updated_at"
+        assert r.get('_ingested_at'), f"record {r.get('event_id')} missing _ingested_at"
+        assert isinstance(r.get('amount'), (int, float)), \
+            f"record {r.get('event_id')} has non-numeric amount: {r.get('amount')}"
+        assert r['amount'] >= 0, f"record {r.get('event_id')} has negative amount: {r['amount']}"
+
+    print(f"[api] validation passed: {len(final_records)} records checked, all unique event_id")
+
+
 def append_run_log(entry):
     """Append one row to the run log, writing the header first if the file is new."""
     RUN_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -97,6 +134,8 @@ def ingest_files():
 
         manifest_path.write_text(json.dumps(manifest, indent=2))
         print(f"[files] manifest written: {manifest_path} ({len(manifest)} total entries)")
+
+        validate_file_manifest(manifest, files_raw)
 
     except Exception as e:
         status = 'failed'
@@ -214,6 +253,8 @@ def ingest_api():
 
         print(f"[api] wrote {records_written} deduplicated records to {events_path}")
         print(f"[api] {duplicates_removed} duplicate record(s) removed during dedup")
+
+        validate_api_output(final_records)
 
         # Only advance the watermark after the write above has succeeded.
         if fetched:
